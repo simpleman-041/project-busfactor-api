@@ -1,6 +1,6 @@
-from pydantic_settings import BaseSettings, SettingConfigDict # クラスを定義するだけで環境変数や指定したファイルから値をマッピングする。Base..はデータの定義、Setting...はデータの読み方の制御
+from pydantic_settings import BaseSettings, SettingsConfigDict # クラスを定義するだけで環境変数や指定したファイルから値をマッピングする。Base..はデータの定義、Setting...はデータの読み方の制御
 
-class Setting(BaseSettings):
+class Settings(BaseSettings):
     """
     アプリ全体の設定値を管理するクラス。
     環境変数があれば優先して、なければデフォルト値を使用する。
@@ -31,4 +31,13 @@ class Setting(BaseSettings):
     risk_level_medium: str = "medium"
     risk_level_low: str = "row"
     
+    # .envファイルアクセス時の設定
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        case_sensitive=False,
+    )
+
+# Settingオブジェクトを作り置きして、誰かが欲しい時にすぐに渡せるようにしている。
+settings = Settings()
     
