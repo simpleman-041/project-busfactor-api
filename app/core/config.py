@@ -5,3 +5,30 @@ class Setting(BaseSettings):
     アプリ全体の設定値を管理するクラス。
     環境変数があれば優先して、なければデフォルト値を使用する。
     """
+    
+    # Github API
+    github_token: str | None = None # 認証用パスワードを入れる変数。
+    github_api_base_url: str = "https://api.github.com" # リクエストの送り先となるURL。
+    
+    # Database
+    database_url = "sqlite:///.bus_factor.dbl" # 今までやってきたように保存場所がローカルだが、接続文字列としてURLを書いている。拡張性が高く、何を使って開くかをプログラムへ伝えられるメリットがある。
+    
+    # Cache / analysis settings
+    # 最大コミットが1000である理由はツールとしての軽量さ、分析精度のバランスをとっていると考えたから。
+    cache_ttl_hours: int = 24
+    max_commits: int = 1000
+    refresh_cooldown_minutes: int = 15 
+    
+    # Default query parameter values 
+    # 180日間ならエンジニアの休暇や短期タスクの影響を避けつつ、誰がコードを支えているかを判断できると考えた。
+    # ブラックボックスの巨大化が危惧されるラインとしてプロジェクトの半数の知識が欠如すると危険と定義。
+    default_window_days: int = 180
+    default_failure_threshold: float = 0.5
+    
+    # Risk level labels
+    # 危険値とされる0.5に近づくにつれて変化する。
+    risk_level_high: str = "high"
+    risk_level_medium: str = "medium"
+    risk_level_low: str = "row"
+    
+    

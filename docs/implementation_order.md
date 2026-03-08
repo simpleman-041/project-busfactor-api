@@ -4,10 +4,10 @@
 
 ### 1. プロジェクト初期化
 
--   [ ] 仮想環境を作成する
--   [ ] FastAPI / Uvicorn / SQLAlchemy / Pydantic / httpx をインストール
--   [ ] `app/` ディレクトリを作成
--   [ ] フォルダ構成を作成
+-   [✔] 仮想環境を作成する
+-   [✔] FastAPI / Uvicorn / SQLAlchemy / Pydantic / httpx をインストール
+-   [✔] `app/` ディレクトリを作成
+-   [✔] フォルダ構成を作成
     -   [ ] core/
     -   [ ] routers/
     -   [ ] schemas/
