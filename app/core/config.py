@@ -11,7 +11,7 @@ class Settings(BaseSettings):
     github_api_base_url: str = "https://api.github.com" # リクエストの送り先となるURL。
     
     # Database
-    database_url = "sqlite:///.bus_factor.dbl" # 今までやってきたように保存場所がローカルだが、接続文字列としてURLを書いている。拡張性が高く、何を使って開くかをプログラムへ伝えられるメリットがある。
+    database_url = "sqlite:///.bus_factor.db" # 今までやってきたように保存場所がローカルだが、接続文字列としてURLを書いている。拡張性が高く、何を使って開くかをプログラムへ伝えられるメリットがある。
     
     # Cache / analysis settings
     # 最大コミットが1000である理由はツールとしての軽量さ、分析精度のバランスをとっていると考えたから。
