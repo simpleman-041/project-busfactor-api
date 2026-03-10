@@ -8,6 +8,9 @@ __pycache__/
 # env file
 .env
 
+# db file
+.bus_factor.db
+
 # vscode
 .vscode/
 
