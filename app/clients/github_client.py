@@ -88,3 +88,65 @@ class GitHubClient:
             "remaining":  int(core.get("remaining",0)),
             "reset": int(core.get("reset"), 0)
         }
+    
+    def get_repository(self, owner: str, repo: str) -> dict[str, Any]:
+        response = self._request("GET", f"/repos/{owner}/{repo}")
+        return response.json
+    
+    def get_contributors(
+        self,
+        owner: str,
+        repo: str,
+        include_anonymous: bool = False, # 匿名ユーザーは結果に考慮しない。
+        max_pages: int = 5,
+    ) -> list[dict[str,Any]]:
+        """
+        contributors 一覧を取得する。
+        commit数の降順で変える。
+        """
+        params: dict[str, Any] = {}
+        if include_anonymous:
+            params["anon"] = "true" # 匿名も加えるならクエリパラメータ付け加えるよ
+        
+        return self._get_paginated(
+            f"repos/{owner}/{repo}/contributors",
+            params=params,
+            max_pages=max_pages,
+        )
+        
+    def get_commits(
+        self,
+        owner: str,
+        repo: str,
+        since: datetime | None = None,
+        until: datetime | None = None,
+        max_pages: int = 10,
+    ) -> list[dict[str, Any]]:
+        """
+        指定期間のcommit一覧を取得。
+        """
+        params: dict[str, Any] = {}
+        
+        if since is not None:
+            params["since"] = self._to_iso8601_z(since) #　右辺は開始時間をISO 8601形式の文字列に変換しているよ。
+        
+        if until is not None:
+            params["until"] = self._to_iso8601_z(until)
+        
+        return self._get_paginated(
+            f"/repos/{owner}/{repo}/commits",
+            params=params,
+            max_pages=max_pages,
+        )
+        
+    @staticmethod
+    def _toi_iso_8601_z(dt: datetime) -> str:
+        """
+        GitHub API用にISO8601文字列へ変換する。
+        """
+        if dt.tzinfo is None: # tzinfoは世界のどこの時間か、時差の計算ルールを教えるためにある。TimeZoneInformationってことか。時差計算しないかするかの条件分岐。
+            dt = dt.replace(tzinfo=timezone.utc)
+        else:
+            dt = dt.astimezone(timezone.utc)
+            
+        return dt.strftime("%Y-%m-%dT%H:%M:%SZ")
