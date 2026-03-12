@@ -29,7 +29,7 @@ class Settings(BaseSettings):
     # 危険値とされる0.5に近づくにつれて変化する。
     risk_level_high: str = "high"
     risk_level_medium: str = "medium"
-    risk_level_low: str = "row"
+    risk_level_low: str = "low"
     
     # .envファイルアクセス時の設定
     model_config = SettingsConfigDict(
