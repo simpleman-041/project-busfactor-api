@@ -144,3 +144,235 @@ class BusFactorService:
             cached=True,
             contributors=contributors,
         )
+        
+    def _check_refresh_cooldown(self, owner: str, repo: str, now: datetime) -> None:
+        stmt = (
+            select(RefreshControl)
+            .where(RefreshControl.owner == owner)
+            .where(RefreshControl.repo == repo)
+        )
+        record = self.db.scalar(stmt)
+        
+        if record is None:
+            return
+        
+        cooldown = timedelta(minutes=settings.refresh_cooldown_minutes)
+        available_at = record.last_refresh_at + cooldown
+        
+        if now < available_at:
+            retry_after = int((available_at - now).total_seconds)
+            raise RefreshCooldownError(retry_after_seconds=max(retry_after,1))
+    
+    def _ensure_repository_exists(self, owner: str, repo: str) -> None:
+        try:
+            self.github_client.get_repository(owner=owner, repo=repo)
+        except httpx.HTTPStatusError as exc:
+            if exc.response.status_code == 404:
+                raise RepositoryNotFoundError(f"Repository not found: {owner}/{repo}")
+            raise
+    
+    def _run_analysis(
+        self,
+        owner: str,
+        repo: str,
+        window_days: int,
+        failure_threshold: float,
+        now: datetime,
+    ) -> AnalysisResult:
+        since = now - timedelta(days=window_days)
+        
+        commits = self.github_client.get_commits(
+            owner=owner,
+            repo=repo,
+            since=since,
+            until=now,
+            max_pages=max(1, settings.max_commits // 100),
+            )
+        commits = commits[: settings.max_commits] # リストの最初からsettings.の分だけ取り出す。スライスね。
+        
+        contribution_map = self._aggregate_commit_authors(commits)
+        
+        if not contribution_map:
+            fallback_contributors = self.github_client.get_contributors(
+                owner=owner,
+                repo=repo,
+                include_anonymous=False,
+                max_pages=(1, settings.max_commits // 100),
+            )
+            contribution_map = self._aggregate_contributors(fallback_contributors)
+        
+        total_contributions = sum(contribution_map.values())
+        if total_contributions <= 0:
+            contributors: list[ContributorOut] = []
+            return AnalysisResult(
+                bus_factor=0,
+                risk_level="high",
+                total_contributions=0,
+            )
+            
+        contributors = self._build_contributor_outputs(contribution_map, total_contributions)
+        bus_factor = self._calculate_bus_factor(contributors, failure_threshold)
+        risk_level = self._determine_risk_level(bus_factor)
+        
+        return AnalysisResult(
+            bus_factor=bus_factor,
+            risk_level=risk_level,
+            contributors=contributors,
+            total_contributions=total_contributions,
+        )
+    
+    def _aggregate_commit_authors(self, commits: list[dict]) -> dict[str, int]:
+        """
+        commit 一覧から author.login ベースで contributions を集計する。
+        """
+        counts: dict[str, int] = {}
+        
+        for commit in commits:
+            author = commit.get("author")
+            if not isinstance(author, dict):
+                continue
+            
+            login = author.get("login")
+            if not isinstance(login, str) or not login:
+                continue
+            
+            counts[login] = counts.get(login, 0) + 1
+        
+        return counts
+    
+    def _aggregate_contributors(self, contributors: list[dict]) -> dict[str, int]:
+        """
+        contributors API の結果を集計する。
+        """
+        counts: dict[str, int] = {}
+        
+        for contributor in contributors:
+            login = contributor.get("login")
+            contributions = contributor.get("contributions", 0)
+            
+            if not isinstance(login, str) or not login:
+                continue
+            if not isinstance(contributions, int) or contributions < 0:
+                continue
+            
+            counts[login] = counts.get(login, 0) + contributions
+            
+        return counts
+    
+    def _build_contributor_outputs(
+        self,
+        contribution_map: dict[str, int],
+        total_contributions: int,
+    ) -> list[ContributorOut]:
+        sorted_itms = sorted(
+            contribution_map.items(),
+            key=lambda item: item[1],
+            reverse=True,
+        )
+        
+        return [
+            ContributorOut(
+                login=login,
+                contributions=contributions,
+                ownership=contributions / total_contributions
+            )
+            for login, contributions in sorted_itms
+        ]
+        
+    def _calculate_bus_factor(
+        self,
+        contributors: list[ContributorOut],
+        failure_threshold: float,
+    ) -> int:
+        """
+        ownership  の大きい順に除外し、累計喪失率が thresholdに達した人物を返す。
+        """
+        cumulative_loss = 0.0
+        
+        for index, contributor in enumerate(contributors, start=1):
+            cumulative_loss += contributor.ownership
+            if cumulative_loss >= failure_threshold:
+                return index
+            
+        return len(contributors)
+    
+    def _determine_risk_level(self, bus_factor: int) -> str:
+        """
+        0,1:high
+        2:medium
+        3以上: low
+        ここは後ほどより効果的な区分に設定する。
+        """
+        if bus_factor <= 1:
+            return "high"
+        if bus_factor == 2:
+            return "medium"
+        return "low"
+    
+    def _upsert_analysis_cache(
+        self,
+        owner: str,
+        repo: str,
+        window_days: int,
+        failure_threshold: float,
+        result: AnalysisResult,
+        analyzed_at: datetime,
+        expires_at:datetime,
+    ) -> None:
+        stmt = (
+            select(AnalysisCache)
+            .where(AnalysisCache.owner == owner)
+            .where(AnalysisCache.repo == repo)
+            .where(AnalysisCache.window_days == window_days)
+            .where(AnalysisCache.failure_threshold == failure_threshold)
+        )
+        record = self.db.scalar(stmt)
+        
+        contributors_json = json.dumps(
+            [contributor.model_dump() for contributor in result.contributors],
+            ensure_ascii=False,
+        )
+        
+        if record is None:
+            record = AnalysisCache(
+                owner=owner,
+                repo=repo,
+                window_days=window_days,
+                failure_threshold=failure_threshold,
+                bus_factor=result.bus_factor,
+                risk_level=result.risk_level,
+                contributors_json=contributors_json,
+                total_contributions = result.total_contributions,
+                analyzed_at=analyzed_at,
+                expires_at=expires_at,
+            )
+            self.db.add(record)
+        else:
+            record.bus_factor = result.bus_factor
+            record.risk_level = result.risk_level
+            record.contributors_json = contributors_json # 左辺は白くても問題なし！白い部分の属性はSQlAlchemyで生成されている。エディタ側が見つけられないだけ。
+            record.total_contributions = result.total_contributions
+            record.analyzed_at = analyzed_at
+            record.expires_at = expires_at
+        
+        self.db.commit()
+        
+    def _upsert_refresh_control(self, owner: str, repo: str, now: datetime) -> None:
+        stmt = (
+            select(RefreshControl)
+            .where(RefreshControl.owner == owner)
+            .where(RefreshControl.repo == repo)
+        )
+        record = self.db.scalar(stmt)
+        
+        if record is None:
+            record = RefreshControl(owner=owner, repo=repo, last_refresh_at=now)
+            self.db.add(record)
+        else:
+            record.last_refresh_at = now
+            
+        self.db.commit()
+        
+    @staticmethod
+    def _now_utc() -> datetime:
+        return datetime.now(timezone.utc)
