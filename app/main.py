@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 
 from app.db.database import init_db
-from app.routers import health, rate_limit
+from app.routers import busfactor, health, rate_limit
 
 app = FastAPI(
     title="Bus Factor API",
@@ -15,3 +15,4 @@ def on_startup() -> None:
     
 app.include_router(health.router) # ここに集え、ルートたちよ！
 app.include_router(rate_limit.router)
+app.include_router(busfactor.router)
