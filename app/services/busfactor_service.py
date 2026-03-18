@@ -1,7 +1,7 @@
 import json
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
-
+from math import exp
 import httpx
 from sqlalchemy.orm import Session
 
@@ -235,23 +235,33 @@ class BusFactorService:
             contributors=contributors,
             total_contributions=total_contributions,
         )
+        
+    def _calculate_weight(self, days_ago: int, decay_rate: float = 0.01) -> float:
+        return exp(-decay_rate * days_ago) # expは指数関数。日数経過に伴い、滑らかに減っていく。
     
-    def _aggregate_commit_authors(self, commits: list[dict]) -> dict[str, int]:
+    def _aggregate_commit_authors(self, commits: list[dict]) -> dict[str, float]:
         """
         commit 一覧から author.login ベースで contributions を集計する。
         """
-        counts: dict[str, int] = {}
+        counts: dict[str, float] = {}
         
         for commit in commits:
             author = commit.get("author")
+            date_str = commit["commit"]["author"]["date"]
+            
             if not isinstance(author, dict):
                 continue
+            
+            commit_dt = datetime.fromisoformat(date_str.replace("Z", "+00:00"))
+            now = datetime.now(timezone.utc)
+            days_ago = (now - commit_dt).days
             
             login = author.get("login")
             if not isinstance(login, str) or not login:
                 continue
             
-            counts[login] = counts.get(login, 0) + 1
+            weight = self._calculate_weight(days_ago)
+            counts[login] = counts.get(login, 0.0) + weight
         
         return counts
     

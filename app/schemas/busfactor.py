@@ -7,7 +7,7 @@ class ContributorOut(BaseModel):
     貢献者一人分の出力モデル
     """
     login: str = Field(..., examples=["steve"])
-    contributions: int = Field(..., ge=0, examples=[30]) # 何件コミットしたか？ge,leは数値範囲制限。
+    contributions: float = Field(..., ge=0, examples=[30]) # 何件コミットしたか？ge,leは数値範囲制限。
     ownership: float = Field(..., ge=0.0, le=1.0, examples=[0.5]) # プロジェクトの何割の知識を有するか？
 
 class BusFactorResponse(BaseModel):
