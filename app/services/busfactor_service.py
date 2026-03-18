@@ -3,13 +3,19 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 
 import httpx
-from sqlalchemy import select # SQLのSELECTをイメージしてもらって
 from sqlalchemy.orm import Session
 
 from app.clients.github_client import GitHubClient
 from app.core.config import settings
-from app.db.models import AnalysisCache, RefreshControl
+from app.db.models import AnalysisCache
 from app.schemas.busfactor import BusFactorResponse,  ContributorOut
+
+from app.db.crud import (
+    get_refresh_control,
+    get_valid_analysis_cache,
+    upsert_analysis_cache,
+    upsert_refresh_control,    
+)
 
 class RepositoryNotFoundError(Exception):
     """
@@ -71,9 +77,9 @@ class BusFactorService:
                 return self._build_response_from_cache(cache)
         
         if refresh:
-            self._check_refresh_cool_down(owner=owner, repo=repo, now=now)
+            self._check_refresh_cooldown(owner=owner, repo=repo, now=now)
         
-        self._ensure_repository_exsists(owner=owner, repo=repo)
+        self._ensure_repository_exists(owner=owner, repo=repo)
         
         result = self._run_analysis(
             owner=owner,
@@ -83,18 +89,27 @@ class BusFactorService:
             now=now,
         )
         
-        self._upsert_analysis_cache(
+        upsert_analysis_cache(
+            db=self.db,
             owner=owner,
             repo=repo,
             window_days=window_days,
             failure_threshold=failure_threshold,
-            result=result,
+            bus_factor=result.bus_factor,
+            risk_level=result.risk_level,
+            contributors=result.contributors,
+            total_contributions=result.total_contributions,
             analyzed_at=now,
-            expires_at=now + timedelta(hours=settings.cache_ttl_hours)
+            expires_at=now + timedelta(hours=settings.cache_ttl_hours),
         )
         
         if refresh:
-            self._upsert_refresh_control(owner=owner,repo=repo, now=now)
+            upsert_refresh_control(
+                db=self.db,
+                owner=owner,
+                repo=repo,
+                now=now,
+            )
             
         return BusFactorResponse(
             repository=f"{owner}/{repo}",
@@ -121,17 +136,16 @@ class BusFactorService:
         failure_threshold: float,
         now: datetime,
     ) -> AnalysisCache | None:
-        stmt = (
-            select(AnalysisCache)
-            .where(AnalysisCache.owner == owner)
-            .where(AnalysisCache.repo == repo)
-            .where(AnalysisCache.window_days == window_days)
-            .where(AnalysisCache.failure_threshold == failure_threshold)
-            .where(AnalysisCache.expires_at > now)
+        return get_valid_analysis_cache(
+            db=self.db,
+            owner=owner,
+            repo=repo,
+            window_days=window_days,
+            failure_threshold=failure_threshold,
+            now=now,
         )
-        return self.db.scalar(stmt)
     
-    def _build_response_from_chache(self, cache: AnalysisCache) -> BusFactorResponse:
+    def _build_response_from_cache(self, cache: AnalysisCache) -> BusFactorResponse:
         raw_contributors = json.loads(cache.contributors_json)
         contributors = [ContributorOut(**item) for item in raw_contributors]
         
@@ -146,12 +160,12 @@ class BusFactorService:
         )
         
     def _check_refresh_cooldown(self, owner: str, repo: str, now: datetime) -> None:
-        stmt = (
-            select(RefreshControl)
-            .where(RefreshControl.owner == owner)
-            .where(RefreshControl.repo == repo)
+        
+        record = get_refresh_control(
+            db=self.db,
+            owner=owner,
+            repo=repo,
         )
-        record = self.db.scalar(stmt)
         
         if record is None:
             return
@@ -197,7 +211,7 @@ class BusFactorService:
                 owner=owner,
                 repo=repo,
                 include_anonymous=False,
-                max_pages=(1, settings.max_commits // 100),
+                max_pages=max(1, settings.max_commits // 100),
             )
             contribution_map = self._aggregate_contributors(fallback_contributors)
         
@@ -207,6 +221,7 @@ class BusFactorService:
             return AnalysisResult(
                 bus_factor=0,
                 risk_level="high",
+                contributors=[],
                 total_contributions=0,
             )
             
@@ -308,70 +323,6 @@ class BusFactorService:
         if bus_factor == 2:
             return "medium"
         return "low"
-    
-    def _upsert_analysis_cache(
-        self,
-        owner: str,
-        repo: str,
-        window_days: int,
-        failure_threshold: float,
-        result: AnalysisResult,
-        analyzed_at: datetime,
-        expires_at:datetime,
-    ) -> None:
-        stmt = (
-            select(AnalysisCache)
-            .where(AnalysisCache.owner == owner)
-            .where(AnalysisCache.repo == repo)
-            .where(AnalysisCache.window_days == window_days)
-            .where(AnalysisCache.failure_threshold == failure_threshold)
-        )
-        record = self.db.scalar(stmt)
-        
-        contributors_json = json.dumps(
-            [contributor.model_dump() for contributor in result.contributors],
-            ensure_ascii=False,
-        )
-        
-        if record is None:
-            record = AnalysisCache(
-                owner=owner,
-                repo=repo,
-                window_days=window_days,
-                failure_threshold=failure_threshold,
-                bus_factor=result.bus_factor,
-                risk_level=result.risk_level,
-                contributors_json=contributors_json,
-                total_contributions = result.total_contributions,
-                analyzed_at=analyzed_at,
-                expires_at=expires_at,
-            )
-            self.db.add(record)
-        else:
-            record.bus_factor = result.bus_factor
-            record.risk_level = result.risk_level
-            record.contributors_json = contributors_json # 左辺は白くても問題なし！白い部分の属性はSQlAlchemyで生成されている。エディタ側が見つけられないだけ。
-            record.total_contributions = result.total_contributions
-            record.analyzed_at = analyzed_at
-            record.expires_at = expires_at
-        
-        self.db.commit()
-        
-    def _upsert_refresh_control(self, owner: str, repo: str, now: datetime) -> None:
-        stmt = (
-            select(RefreshControl)
-            .where(RefreshControl.owner == owner)
-            .where(RefreshControl.repo == repo)
-        )
-        record = self.db.scalar(stmt)
-        
-        if record is None:
-            record = RefreshControl(owner=owner, repo=repo, last_refresh_at=now)
-            self.db.add(record)
-        else:
-            record.last_refresh_at = now
-            
-        self.db.commit()
         
     @staticmethod
     def _now_utc() -> datetime:

@@ -65,6 +65,9 @@ def get_bus_factor(
     
     # GitHub側の403は429として、通信障害は503に寄せる。
     except RepositoryNotFoundError as exc:
+        print("status:", exc.response.status_code)
+        print("body:", exc.response.text)
+        print("headers:", exc.response.headers)
         if exc.response.status_code == 403:
             raise HTTPException(
                 status_code=429,
@@ -76,8 +79,31 @@ def get_bus_factor(
             detail="GitHub API unavailable",
         ) from exc
         
-    except httpx.HTTPError as exc:
+    except httpx.HTTPStatusError as exc:
+        print("status:", exc.response.status_code)
+        print("body:", exc.response.text)
+        
+        if exc.response.status_code == 403:
+            raise HTTPException(
+                status_code=429,
+                detail="GitHub API rate limit exceeded"
+            ) from exc
+        
         raise HTTPException(
             status_code=503,
-            detail="GitHub API unavailable",
+            detail="GitHub API unavailable"
         ) from exc
+        
+    except httpx.ConnectError as exc:
+        print("connect error:", str(exc))
+        raise HTTPException(
+            status_code=503,
+            detail="Failed to connect to GitHub API"
+        ) from exc
+        
+    except httpx.HTTPError as exc:
+        print("http error", str(exc))
+        raise HTTPException(
+            status_code=503,
+            detail="GitHub API unavailable"
+        )

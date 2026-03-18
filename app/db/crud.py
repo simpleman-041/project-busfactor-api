@@ -70,8 +70,8 @@ def upsert_analysis_cache(
         window_days=window_days,
         failure_threshold=failure_threshold,
     )
-    contributors_json = json.dump(
-        [contributor.model_dumps() for contributor in contributors],
+    contributors_json = json.dumps(
+        [contributor.model_dump() for contributor in contributors],
         ensure_ascii=False,
     )
     
@@ -98,7 +98,7 @@ def upsert_analysis_cache(
         record.expires_at = expires_at
     
     db.commit()
-    db.refresh()
+    db.refresh(record)
     return record
 
 def get_refresh_control(

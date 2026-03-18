@@ -20,7 +20,7 @@ class BusFactorResponse(BaseModel):
     risk_level: Literal["high", "medium", "low"] = Field(..., examples=["medium"])
     failure_threshold: float = Field(..., ge=0.0, le=1.0, examples=[0.5])
     window_days: int = Field(..., ge=1, examples=[180])
-    cache: bool = Field(..., examples=[True])
+    cached: bool = Field(..., examples=[True])
     contributors: list[ContributorOut] = Field(
         ...,
         examples=[

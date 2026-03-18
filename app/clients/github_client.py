@@ -37,8 +37,11 @@ class GitHubClient:
         path: str, # pathはエンドポイントのパス。
         params: dict[str, Any] | None = None, # paramsはURLクエリパラメータを指す。
     ) -> httpx.Response:
+
         url = f"{self.base_url}{path}" # 通信先のアドレス完成
-        
+        print("base_url repr:", repr(self.base_url))
+        print("path repr:", repr(path))
+        print("full_url repr:", repr(url))
         with httpx.Client(timeout=self.timeout, headers=self._build_headers()) as client:
             response = client.request(method, url, params=params) # response変数はリクエストによるサーバーの反応を受け取っている。methodはHTTPメソッドを受け取るよ。GET,POSTとか。
         
@@ -109,7 +112,7 @@ class GitHubClient:
             params["anon"] = "true" # 匿名も加えるならクエリパラメータ付け加えるよ
         
         return self._get_paginated(
-            f"repos/{owner}/{repo}/contributors",
+            f"/repos/{owner}/{repo}/contributors",
             params=params,
             max_pages=max_pages,
         )
@@ -128,10 +131,10 @@ class GitHubClient:
         params: dict[str, Any] = {}
         
         if since is not None:
-            params["since"] = self._to_iso8601_z(since) #　右辺は開始時間をISO 8601形式の文字列に変換しているよ。
+            params["since"] = self._to_iso_8601_z(since) #　右辺は開始時間をISO 8601形式の文字列に変換しているよ。
         
         if until is not None:
-            params["until"] = self._to_iso8601_z(until)
+            params["until"] = self._to_iso_8601_z(until)
         
         return self._get_paginated(
             f"/repos/{owner}/{repo}/commits",
@@ -140,7 +143,7 @@ class GitHubClient:
         )
         
     @staticmethod
-    def _toi_iso_8601_z(dt: datetime) -> str:
+    def _to_iso_8601_z(dt: datetime) -> str:
         """
         GitHub API用にISO8601文字列へ変換する。
         """

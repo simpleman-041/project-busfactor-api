@@ -38,7 +38,7 @@ class AnalysisCache(Base):
     bus_factor: Mapped[int] = mapped_column(Integer, nullable=False)
     risk_level: Mapped[str] = mapped_column(String, nullable=False)
 
-    cotributors_json: Mapped[str] = mapped_column(Text, nullable=False)
+    contributors_json: Mapped[str] = mapped_column(Text, nullable=False)
     total_contributions: Mapped[int] = mapped_column(Integer, nullable=False)
 
     analyzed_at: Mapped[str] = mapped_column(DateTime, nullable=False)
