@@ -39,9 +39,7 @@ class GitHubClient:
     ) -> httpx.Response:
 
         url = f"{self.base_url}{path}" # 通信先のアドレス完成
-        print("base_url repr:", repr(self.base_url))
-        print("path repr:", repr(path))
-        print("full_url repr:", repr(url))
+        
         with httpx.Client(timeout=self.timeout, headers=self._build_headers()) as client:
             response = client.request(method, url, params=params) # response変数はリクエストによるサーバーの反応を受け取っている。methodはHTTPメソッドを受け取るよ。GET,POSTとか。
         
