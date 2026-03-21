@@ -20,11 +20,6 @@ class AnalysisCache(Base):
         "failure_threshold",
         name="uq_analysis_cache_key", # nameは識別名。
     ),
-        # カラム値制約！
-        CheckConstraint(
-            "risk_level IN ('high', 'medium', 'low')",
-            name="ck_analysis_cache_lisk_level",
-        ),
     )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
@@ -36,7 +31,6 @@ class AnalysisCache(Base):
     failure_threshold: Mapped[Float] = mapped_column(String, nullable=False)
 
     bus_factor: Mapped[int] = mapped_column(Integer, nullable=False)
-    risk_level: Mapped[str] = mapped_column(String, nullable=False)
 
     contributors_json: Mapped[str] = mapped_column(Text, nullable=False)
     total_contributions: Mapped[int] = mapped_column(Integer, nullable=False)

@@ -36,7 +36,6 @@ class AnalysisResult:
     内部計算用の中間結果
     """
     bus_factor: int
-    risk_level: str
     contributors: list[ContributorOut]
     total_contributions: int
     
@@ -96,7 +95,6 @@ class BusFactorService:
             window_days=window_days,
             failure_threshold=failure_threshold,
             bus_factor=result.bus_factor,
-            risk_level=result.risk_level,
             contributors=result.contributors,
             total_contributions=result.total_contributions,
             analyzed_at=now,
@@ -114,7 +112,6 @@ class BusFactorService:
         return BusFactorResponse(
             repository=f"{owner}/{repo}",
             bus_factor=result.bus_factor,
-            risk_level=result.risk_level,
             failure_threshold=failure_threshold,
             window_days=window_days,
             cached=False,
@@ -152,7 +149,6 @@ class BusFactorService:
         return BusFactorResponse(
             repository=f"{cache.owner}/{cache.repo}",
             bus_factor=cache.bus_factor,
-            risk_level=cache.risk_level,
             failure_threshold=cache.failure_threshold,
             window_days=cache.window_days,
             cached=True,
@@ -220,18 +216,15 @@ class BusFactorService:
             contributors: list[ContributorOut] = []
             return AnalysisResult(
                 bus_factor=0,
-                risk_level="high",
                 contributors=[],
                 total_contributions=0,
             )
             
         contributors = self._build_contributor_outputs(contribution_map, total_contributions)
         bus_factor = self._calculate_bus_factor(contributors, failure_threshold)
-        risk_level = self._determine_risk_level(bus_factor)
         
         return AnalysisResult(
             bus_factor=bus_factor,
-            risk_level=risk_level,
             contributors=contributors,
             total_contributions=total_contributions,
         )
@@ -320,19 +313,6 @@ class BusFactorService:
                 return index
             
         return len(contributors)
-    
-    def _determine_risk_level(self, bus_factor: int) -> str:
-        """
-        0,1:high
-        2:medium
-        3以上: low
-        ここは後ほどより効果的な区分に設定する。
-        """
-        if bus_factor <= 1:
-            return "high"
-        if bus_factor == 2:
-            return "medium"
-        return "low"
         
     @staticmethod
     def _now_utc() -> datetime:

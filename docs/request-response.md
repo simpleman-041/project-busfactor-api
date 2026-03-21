@@ -52,7 +52,6 @@ MVPならこのくらいがちょうど良いです。
 {
   "repository": "owner/repo",
   "bus_factor": 2,
-  "risk_level": "medium",
   "failure_threshold": 0.5,
   "window_days": 180,
   "cached": true,
@@ -89,7 +88,6 @@ class ContributorOut(BaseModel):
 class BusFactorResponse(BaseModel):
     repository: str
     bus_factor: int
-    risk_level: str
     failure_threshold: float
     window_days: int
     cached: bool

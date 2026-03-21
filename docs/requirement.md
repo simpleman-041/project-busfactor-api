@@ -233,7 +233,6 @@ MVP では **シンプル API + キャッシュ** を採用する。
 {
   "repository": "owner/repo",
   "bus_factor": 2,
-  "risk_level": "medium",
   "failure_threshold": 0.5,
   "window_days": 180,
   "contributors": [
@@ -316,7 +315,6 @@ MVP では仮に **24時間** とする。
 | window_days       | INTEGER  | 分析期間                |
 | failure_threshold | REAL     | 崩壊閾値                |
 | bus_factor        | INTEGER  | 算出結果                |
-| risk_level        | TEXT     | リスク分類               |
 | contributors_json | TEXT     | contributors 情報JSON |
 | created_at        | DATETIME | 作成日時                |
 | expires_at        | DATETIME | キャッシュ期限             |

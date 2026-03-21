@@ -17,7 +17,6 @@ class BusFactorResponse(BaseModel):
     # database_schema.mdファイルに各変数が持つ値が何を示すか書いてあるよ。
     repository: str = Field(..., examples=["owner/repo"])
     bus_factor: int = Field(..., ge=1, examples=[2])
-    risk_level: Literal["high", "medium", "low"] = Field(..., examples=["medium"])
     failure_threshold: float = Field(..., ge=0.0, le=1.0, examples=[0.5])
     window_days: int = Field(..., ge=1, examples=[180])
     cached: bool = Field(..., examples=[True])

@@ -60,7 +60,6 @@ Bus Factor 分析の **キャッシュ結果を保存する**テーブル。
 | window_days         | INTEGER      | 分析対象の期間（日数）                |
 | failure_threshold   | REAL         | Bus Factor 判定のしきい値         |
 | bus_factor          | INTEGER      | 計算された Bus Factor           |
-| risk_level          | TEXT         | リスク分類（high / medium / low） |
 | contributors_json   | TEXT         | コントリビューター統計の JSON 配列       |
 | total_contributions | INTEGER      | 集計された総コミット数                |
 | analyzed_at         | DATETIME     | 分析が実行された時刻                 |
@@ -77,7 +76,6 @@ Bus Factor 分析の **キャッシュ結果を保存する**テーブル。
   "window_days": 180,
   "failure_threshold": 0.5,
   "bus_factor": 2,
-  "risk_level": "medium",
   "contributors_json": [
     {"login": "alice", "contributions": 50, "ownership": 0.5},
     {"login": "bob", "contributions": 30, "ownership": 0.3},
@@ -101,7 +99,6 @@ CREATE TABLE analysis_cache (
     window_days INTEGER NOT NULL,
     failure_threshold REAL NOT NULL,
     bus_factor INTEGER NOT NULL,
-    risk_level TEXT NOT NULL CHECK (risk_level IN ('high', 'medium', 'low'))
     contributors_json TEXT NOT NULL,
     total_contributions INTEGER NOT NULL,
     analyzed_at TEXT NOT NULL,

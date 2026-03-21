@@ -127,7 +127,6 @@ GET /busfactor/{owner}/{repo}
 {
   "repository": "owner/repo",
   "bus_factor": 2,
-  "risk_level": "medium",
   "failure_threshold": 0.5,
   "window_days": 180,
   "cached": true,

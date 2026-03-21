@@ -127,7 +127,6 @@ APIの入出力定義です。
 * GitHub API 呼び出し
 * ownership 計算
 * Bus Factor 算出
-* risk_level 判定
 * DB保存
 
 つまり、Bus Factor API の本体です。

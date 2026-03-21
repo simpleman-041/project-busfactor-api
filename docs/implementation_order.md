@@ -104,7 +104,6 @@
 
 -   [ ] ownership計算
 -   [ ] BusFactor算出
--   [ ] risk_level判定
 -   [ ] キャッシュ確認
 -   [ ] refresh制御
 -   [ ] GitHub API連携
@@ -114,7 +113,6 @@
 
 -   [ ] ownership計算確認
 -   [ ] bus factor算出確認
--   [ ] risk分類確認
 -   [ ] cache動作確認
 -   [ ] refresh=true確認
 -   [ ] refresh制限確認

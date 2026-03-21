@@ -54,7 +54,6 @@ def upsert_analysis_cache(
     window_days: int,
     failure_threshold: float,
     bus_factor: int,
-    risk_level: str,
     contributors: list[ContributorOut],
     total_contributions: int,
     analyzed_at: datetime,
@@ -82,7 +81,6 @@ def upsert_analysis_cache(
         window_days=window_days,
         failure_threshold=failure_threshold,
         bus_factor=bus_factor,
-        risk_level=risk_level,
         contributors_json=contributors_json,
         total_contributions=total_contributions,
         analyzed_at=analyzed_at,
@@ -91,7 +89,6 @@ def upsert_analysis_cache(
         db.add(record)
     else:
         record.bus_factor = bus_factor
-        record.risk_level = risk_level
         record.contributors_json= contributors_json
         record.total_contributions = total_contributions
         record.analyzed_at = analyzed_at
