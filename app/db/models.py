@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import CheckConstraint, DateTime, Float, Integer, String,Text, UniqueConstraint # Unique..は一意制約、check..はカラム値制約。
+from sqlalchemy import DateTime, Float, Integer, String,Text, UniqueConstraint # Unique..は一意制約、check..はカラム値制約。
 from sqlalchemy.orm import Mapped, mapped_column # Mは型ヒント、mはカラムの詳細設定。
 
 from app.db.database import Base
