@@ -3,6 +3,10 @@
 
 GitHub リポジトリの開発知識の集中度を推定し、**Bus Factor（属人化リスク）**を算出する API です。
 
+## Demo
+
+https://busfactor-api.onrender.com/docs
+
 ---
 
 ## 🚀 概要
@@ -22,7 +26,8 @@ Bus Factor とは、
 * FastAPI を用いた API 設計・実装力の証明
 * 外部 API（GitHub API）連携の実装
 * キャッシュ設計（DB）の実装
-* ポートフォリオとして公開可能なプロダクト作成 
+* ポートフォリオとして公開可能なプロダクト作成
+* デプロイの経験を積む
 
 ---
 
